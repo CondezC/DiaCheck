@@ -1,31 +1,51 @@
+import fs from "fs";
 import axios from "axios";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-export async function processUpload({ base64 }) {
+export async function processUpload({ file, base64 }) {
   try {
-    if (!base64) {
-      return { success: false, error: "No image received (base64 missing)" };
+    let imageBase64;
+
+    // 🔥 1. If Vercel gives base64 directly
+    if (base64) {
+      imageBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
     }
 
-    // Remove prefix if exists
-    const cleanBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
+    // 🔥 2. If uploaded file
+    else if (file) {
+      const filePath = file.filepath || file.path;
+      if (!filePath) return { success: false, error: "File path missing" };
 
-    // Roboflow endpoint
-    const url = `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}?api_key=${process.env.ROBOFLOW_API_KEY}`;
+      imageBase64 = fs.readFileSync(filePath, "base64");
+
+      // delete temp
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+
+    else {
+      return { success: false, error: "No image received" };
+    }
+
+    // 🔥 FIXED: CLASSIFICATION ENDPOINT
+    const url = `https://infer.roboflow.com/${process.env.ROBOFLOW_MODEL_ID}/${process.env.ROBOFLOW_MODEL_VERSION}?api_key=${process.env.ROBOFLOW_API_KEY}`;
 
     console.log("📡 Sending to Roboflow:", url);
 
-    // Send to Roboflow CLASSIFICATION API
-    const response = await axios.post(url, {
-      image: cleanBase64,
+    // 🔥 FIXED PAYLOAD: FORM ENCODED (NOT JSON)
+    const response = await axios({
+      method: "POST",
+      url,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      data: `image=${imageBase64}`,
     });
 
     console.log("✅ Roboflow Response:", response.data);
 
     const predictions = response.data?.predictions || [];
 
+    // 🔥 No predictions means "healthy"
     if (predictions.length === 0) {
       return {
         success: true,
@@ -36,17 +56,18 @@ export async function processUpload({ base64 }) {
       };
     }
 
-    const topPrediction = predictions.sort((a, b) => b.confidence - a.confidence)[0];
+    // 🔥 pick highest confidence class
+    const top = predictions.sort((a, b) => b.confidence - a.confidence)[0];
 
     return {
       success: true,
-      disease: topPrediction.class,
-      confidence: Math.round(topPrediction.confidence * 100),
+      disease: top.class,
+      confidence: Math.round(top.confidence * 100),
       predictions,
     };
 
   } catch (error) {
-    console.error("❌ Roboflow Error:", error.response?.data || error.message);
+    console.error("❌ ROBOFLOW ERROR:", error.response?.data || error.message);
 
     return {
       success: false,
