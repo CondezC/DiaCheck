@@ -8,12 +8,12 @@ export async function processUpload({ file, base64 }) {
   try {
     let imageBase64;
 
-    // If base64 came from Vercel form upload
+    // If base64 came from client
     if (base64) {
       imageBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
     }
 
-    // If file uploaded locally
+    // If file came from FormData
     else if (file) {
       const filePath = file.filepath || file.path;
 
@@ -23,7 +23,7 @@ export async function processUpload({ file, base64 }) {
 
       imageBase64 = fs.readFileSync(filePath, { encoding: "base64" });
 
-      // delete temp upload file
+      // Cleanup temp file
       try {
         fs.unlinkSync(filePath);
       } catch {}
@@ -38,19 +38,19 @@ export async function processUpload({ file, base64 }) {
 
     console.log("📡 Sending request to Roboflow:", url);
 
-    // Send JSON payload
-    const response = await axios.post(url, {
-      image: imageBase64,
-    });
+    const response = await axios.post(
+      url,
+      { image: imageBase64 },
+      { timeout: 8000 } // <--- IMPORTANT
+    );
 
     console.log("✅ Roboflow Response:", response.data);
 
     const predictions = response.data?.predictions || [];
 
-    // DEBUG MODE — return FULL RAW RESPONSE to frontend
     return {
       success: true,
-      debug_raw_response: response.data, // 👈 IMPORTANT
+      debug_raw_response: response.data,
       predictions
     };
 
@@ -59,7 +59,11 @@ export async function processUpload({ file, base64 }) {
 
     return {
       success: false,
-      error: error.response?.data || error.message || "Roboflow request failed",
+      error:
+        error.response?.data ||
+        error.code ||
+        error.message ||
+        "Roboflow request failed",
     };
   }
 }
