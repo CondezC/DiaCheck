@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home | DiaCheck • AI Diabetes Risk Predictor</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+  <header>
+    <div class="container">
+      <button class="menu-toggle"><i class="fas fa-bars"></i></button>
+      <a style="color: #fff;text-decoration: none;" href="/">
+        <h1><i class="fas fa-leaf"></i> DiaCheck • AI Diabetes Risk Predictor</h1>
+      </a>
+      <nav>
+        <ul id="navMenu">
+          <li><a href="#" data-target="home">Home</a></li>
+          <li><a href="#" data-target="detect">Analyze Health Data</a></li>
+          <li><a href="#" data-target="history">History</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="home" class="hero-section">
+      <h2>Welcome to DiaCheck</h2>
+      <p>
+        Clinically validated AI assesses your Type 2 diabetes risk by analyzing your health documents and test results.
+        <br />
+        Upload your health checkups • No login required • 100% free.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card" data-target="detect" data-action="capture">
+          <i class="fas fa-camera"></i>
+          <h3>Capture Document</h3>
+          <p>Use your camera to capture health reports or documents.</p>
+        </div>
+
+        <div class="feature-card" data-target="detect" data-action="upload">
+          <i class="fas fa-file-medical"></i>
+          <h3>Upload Health Documents</h3>
+          <p>Upload lab results, medical reports, or previous checkups for analysis.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="detect" class="detection-section">
+      <h2>Analyze Health Data</h2>
+
+      <div class="upload-area">
+        <p>Upload or capture images of your health documents for diabetes risk analysis:</p>
+
+        <div class="upload-guide">
+          <p><strong>Accepted documents:</strong> Lab results, medical reports, prescriptions, or any relevant health record.</p>
+        </div>
+
+        <div class="button-container">
+          <button id="startCameraBtn" class="btn primary-btn">
+            <i class="fas fa-camera"></i> Capture Document
+          </button>
+
+          <button id="uploadBtn" class="btn primary-btn">
+            <i class="fas fa-file-upload"></i> Upload Health Document
+          </button>
+
+          <input type="file" id="imageInput" accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf">
+        </div>
+
+        <div class="image-preview-container">
+          <div id="loadingSpinner" class="spinner-container" style="display:none;">
+            <p>Analyzing health data...</p>
+          </div>
+
+          <video id="videoPreview" autoplay playsinline style="display:none"></video>
+          <img id="imagePreview" style="display:none;" />
+          <p id="previewPlaceholder">No document selected</p>
+
+          <button id="captureBtn" class="btn capture-btn" style="display:none;">
+            <i class="fas fa-circle"></i>
+          </button>
+        </div>
+
+        <div class="button-container">
+          <button id="analyzeImageBtn" class="btn success-btn" disabled>
+            <i class="fas fa-stethoscope"></i> Analyze Health Document
+          </button>
+        </div>
+      </div>
+
+      <!-- ✅ RESULTS SECTION -->
+      <div id="resultsSection" class="results-area" style="display:none;">
+        <h3>Health Analysis Results</h3>
+
+        <div class="result-item">
+          <strong>Diabetes Risk Assessment:</strong>
+          <span id="diseaseType" class="result-value">
+            <!-- OUTPUT:
+              - No Diabetes Detected
+              - Diabetes Detected
+            -->
+          </span>
+        </div>
+
+        <div class="result-item">
+          <strong>Analysis Confidence:</strong>
+          <span id="confidenceScore" class="result-value"></span>
+        </div>
+
+        <div class="result-description">
+          <h4>Summary:</h4>
+          <p id="diseaseDescription"></p>
+        </div>
+
+        <div class="prescription-mitigation">
+          <h4>Medical Recommendations:</h4>
+          <ul id="prescription"></ul>
+        </div>
+
+        <div class="prescription-mitigation">
+          <h4>Health Management Strategies:</h4>
+          <ul id="mitigation"></ul>
+        </div>
+
+        <!-- ✅ NEW TRY AGAIN BUTTON -->
+        <div class="button-container">
+          <button id="retryBtn" class="btn secondary-btn" onclick="
+            document.getElementById('resultsSection').style.display='none';
+            document.getElementById('imagePreview').style.display='none';
+            document.getElementById('videoPreview').style.display='none';
+            document.getElementById('previewPlaceholder').style.display='block';
+            document.getElementById('analyzeImageBtn').disabled=true;
+            document.getElementById('imageInput').value='';
+            window.scrollTo({ top: document.getElementById('detect').offsetTop, behavior: 'smooth' });
+          ">
+            <i class="fas fa-redo"></i> Try Again
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="history" class="history-section">
+      <h2>Analysis History</h2>
+      <div id="historyList"></div>
+      <div id="noHistoryMessage" style="display:none;">
+        <p>No previous health analyses found.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 DiaCheck • AI Diabetes Risk Predictor</p>
+      <p class="disclaimer">This tool is not a substitute for professional medical advice.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
