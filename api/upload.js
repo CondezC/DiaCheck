@@ -14,21 +14,19 @@ export const config = {
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
-  }
+    }
 
   try {
     const form = formidable({ multiples: false });
 
     const [fields, files] = await form.parse(req);
 
-    if (!files.file) {
+    if (!files.image) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const file = files.file[0];
-
+    const file = files.image[0];
     const buffer = fs.readFileSync(file.filepath);
-
     const base64Image = buffer.toString("base64");
 
     const url = `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}?api_key=${process.env.ROBOFLOW_API_KEY}&format=json`;
@@ -39,7 +37,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      roboflow: response.data,
+      predictions: response.data.predictions,
     });
   } catch (error) {
     console.error("UPLOAD API ERROR:", error);
