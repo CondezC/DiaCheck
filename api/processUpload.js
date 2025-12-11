@@ -1,53 +1,31 @@
-import fs from "fs";
 import axios from "axios";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-export async function processUpload({ file, base64 }) {
+export async function processUpload({ base64 }) {
   try {
-    let imageBase64;
-
-    // If the image was sent already in base64 (Vercel)
-    if (base64) {
-      imageBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
+    if (!base64) {
+      return { success: false, error: "No image received (base64 missing)" };
     }
 
-    // If the user uploaded a file
-    else if (file) {
-      const filePath = file.filepath || file.path;
+    // Remove prefix if exists
+    const cleanBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
 
-      if (!filePath) {
-        return { success: false, error: "File path missing (Vercel)" };
-      }
-
-      imageBase64 = fs.readFileSync(filePath, { encoding: "base64" });
-
-      // Clean up uploaded temp file
-      try {
-        fs.unlinkSync(filePath);
-      } catch {}
-    }
-
-    else {
-      return { success: false, error: "No image received" };
-    }
-
-    // Roboflow CLASSIFICATION API endpoint
+    // Roboflow endpoint
     const url = `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}?api_key=${process.env.ROBOFLOW_API_KEY}`;
 
-    console.log("📡 Sending request to Roboflow:", url);
+    console.log("📡 Sending to Roboflow:", url);
 
-    // Send JSON payload
+    // Send to Roboflow CLASSIFICATION API
     const response = await axios.post(url, {
-      image: imageBase64,
+      image: cleanBase64,
     });
 
     console.log("✅ Roboflow Response:", response.data);
 
     const predictions = response.data?.predictions || [];
 
-    // No predictions = Healthy
     if (predictions.length === 0) {
       return {
         success: true,
@@ -58,7 +36,6 @@ export async function processUpload({ file, base64 }) {
       };
     }
 
-    // Get highest confidence prediction
     const topPrediction = predictions.sort((a, b) => b.confidence - a.confidence)[0];
 
     return {
@@ -69,7 +46,7 @@ export async function processUpload({ file, base64 }) {
     };
 
   } catch (error) {
-    console.error("❌ ROBOFLOW ERROR:", error.response?.data || error.message);
+    console.error("❌ Roboflow Error:", error.response?.data || error.message);
 
     return {
       success: false,

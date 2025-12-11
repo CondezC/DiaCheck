@@ -166,7 +166,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
- async function process(formData) {
+async function processHistory(formData) {
   try {
     const res = await fetch("/api/upload", {
       method: "POST",
