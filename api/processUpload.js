@@ -8,37 +8,46 @@ export async function processUpload({ file, base64 }) {
   try {
     let imageBase64;
 
-    // 🔥 If Vercel sent a base64 directly
+    // If the image was sent already in base64 (Vercel)
     if (base64) {
       imageBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
     }
-    // 🔥 If user uploaded a file
+
+    // If the user uploaded a file
     else if (file) {
       const filePath = file.filepath || file.path;
 
       if (!filePath) {
-        return { success: false, error: "File path missing (from Vercel)" };
+        return { success: false, error: "File path missing (Vercel)" };
       }
 
       imageBase64 = fs.readFileSync(filePath, { encoding: "base64" });
 
-      // Delete temp file
-      try { fs.unlinkSync(filePath); } catch {}
-    }
-    else {
-      return { success: false, error: "No image found" };
+      // Clean up uploaded temp file
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
     }
 
-    // 🔥 FIXED — Use Roboflow CLASSIFICATION API
+    else {
+      return { success: false, error: "No image received" };
+    }
+
+    // Roboflow CLASSIFICATION API endpoint
     const url = `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}?api_key=${process.env.ROBOFLOW_API_KEY}`;
 
-    // 🔥 FIXED — classification expects JSON, not form-urlencoded
+    console.log("📡 Sending request to Roboflow:", url);
+
+    // Send JSON payload
     const response = await axios.post(url, {
       image: imageBase64,
     });
 
+    console.log("✅ Roboflow Response:", response.data);
+
     const predictions = response.data?.predictions || [];
 
+    // No predictions = Healthy
     if (predictions.length === 0) {
       return {
         success: true,
@@ -49,7 +58,7 @@ export async function processUpload({ file, base64 }) {
       };
     }
 
-    // Pick highest confidence
+    // Get highest confidence prediction
     const topPrediction = predictions.sort((a, b) => b.confidence - a.confidence)[0];
 
     return {
@@ -64,7 +73,7 @@ export async function processUpload({ file, base64 }) {
 
     return {
       success: false,
-      error: error.response?.data || "Roboflow request failed",
+      error: error.response?.data || error.message || "Roboflow request failed",
     };
   }
 }
