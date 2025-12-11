@@ -1,65 +1,59 @@
 import formidable from "formidable";
-import fs from "fs";
+import sharp from "sharp";
 import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, 
   },
 };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ success: false, error: "Method Not Allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // Formidable v3 (Correct syntax)
     const form = formidable({
       multiples: false,
       keepExtensions: true,
     });
 
-    // Parse request
-    const { files } = await new Promise((resolve, reject) => {
-      form.parse(req, (err, fields, files) => {
-        if (err) reject(err);
-        else resolve({ fields, files });
-      });
-    });
+    const [fields, files] = await form.parse(req);
 
-    const file = files.image;
-    if (!file) {
-      return res.status(400).json({ success: false, error: "No image uploaded" });
+    if (!files.file) {
+      return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // Read the uploaded file as Base64
-    const imageBuffer = fs.readFileSync(file.filepath);
-    const imageBase64 = imageBuffer.toString("base64");
+    const file = files.file[0]; // FORMIABLE v3 format
 
-    // Send image to Roboflow
-    const roboflowResponse = await axios({
-      method: "POST",
-      url: `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}`,
-      params: {
-        api_key: process.env.ROBOFLOW_API_KEY,
-      },
-      data: imageBase64,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+    // Convert file → buffer
+    const buffer = await sharp(file.filepath)
+      .resize({ width: 640 })
+      .jpeg()
+      .toBuffer();
+
+    const base64Image = buffer.toString("base64");
+
+    // Request to Roboflow
+    const url = `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}?api_key=${process.env.ROBOFLOW_API_KEY}&format=json`;
+
+    const response = await axios.post(url, base64Image, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
 
     return res.status(200).json({
       success: true,
-      predictions: roboflowResponse.data.predictions,
+      roboflow: response.data,
     });
-
-  } catch (err) {
-    console.error("UPLOAD API ERROR:", err);
+  } catch (error) {
+    console.error("UPLOAD API ERROR:", error);
     return res.status(500).json({
-      success: false,
-      error: err.message || "Server Error",
+      error: "Upload processing failed",
+      details: error.message,
     });
   }
 }
