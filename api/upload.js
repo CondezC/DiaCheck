@@ -14,7 +14,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // NEW VERCEL-COMPATIBLE SYNTAX
     const form = formidable({ multiples: false });
 
     const data = await new Promise((resolve, reject) => {
@@ -29,20 +28,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "No image uploaded" });
     }
 
+    // Read file to Base64
     const imageBase64 = fs.readFileSync(file.filepath, { encoding: "base64" });
 
-    // Send to Roboflow
+    // ⭐ FIXED: Correct Roboflow request format
     const roboflowRes = await axios({
       method: "POST",
       url: `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}`,
       params: {
         api_key: process.env.ROBOFLOW_API_KEY
       },
-      data: imageBase64,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+      data: `base64=${imageBase64}`,   // <-- REQUIRED FORMAT
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
     });
 
-    console.log("ROBLOFLOW RESPONSE:", roboflowRes.data);
+    console.log("ROBOFLOW RESPONSE:", roboflowRes.data);
 
     return res.status(200).json({
       success: true,
