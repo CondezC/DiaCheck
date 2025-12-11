@@ -10,52 +10,50 @@ export const config = {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ success: false, message: "Method Not Allowed" });
+    return res.status(405).json({ success: false, error: "Method Not Allowed" });
   }
 
   try {
-    console.log("📩 File upload received...");
+    // NEW VERCEL-COMPATIBLE SYNTAX
+    const form = formidable({ multiples: false });
 
-    // Parse multipart form (image)
-    const form = new formidable.IncomingForm();
-    const { fields, files } = await new Promise((resolve, reject) => {
+    const data = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
         if (err) reject(err);
         else resolve({ fields, files });
       });
     });
 
-    const file = files.image;
+    const file = data.files.image;
     if (!file) {
-      return res.status(400).json({ success: false, message: "No image uploaded" });
+      return res.status(400).json({ success: false, error: "No image uploaded" });
     }
 
-    const fileData = fs.readFileSync(file.filepath);
-    const base64 = fileData.toString("base64");
+    const imageBase64 = fs.readFileSync(file.filepath, { encoding: "base64" });
 
-    console.log("📡 Sending request to Roboflow...");
-
-    const modelId = process.env.ROBOFLOW_MODEL_ID;
-    const apiKey = process.env.ROBOFLOW_API_KEY;
-
-    const roboflowURL = `https://classify.roboflow.com/${modelId}?api_key=${apiKey}`;
-
-    const rfRes = await axios({
+    // Send to Roboflow
+    const roboflowRes = await axios({
       method: "POST",
-      url: roboflowURL,
-      data: base64,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      url: `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}`,
+      params: {
+        api_key: process.env.ROBOFLOW_API_KEY
+      },
+      data: imageBase64,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
     });
 
-    console.log("✅ Roboflow Response:", rfRes.data);
+    console.log("ROBLOFLOW RESPONSE:", roboflowRes.data);
 
     return res.status(200).json({
       success: true,
-      predictions: rfRes.data.predictions || [],
+      predictions: roboflowRes.data.predictions
     });
 
-  } catch (error) {
-    console.error("❌ SERVER ERROR:", error);
-    return res.status(500).json({ success: false, error: error.message });
+  } catch (err) {
+    console.error("SERVER ERROR:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || "Unknown server error"
+    });
   }
 }
