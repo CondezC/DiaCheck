@@ -1,5 +1,4 @@
 import formidable from "formidable";
-import fs from "fs";
 import axios from "axios";
 
 export const config = {
@@ -16,6 +15,7 @@ export default async function handler(req, res) {
   try {
     const form = formidable({ multiples: false });
 
+    // Parse form
     const data = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
         if (err) reject(err);
@@ -28,34 +28,36 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "No image uploaded" });
     }
 
-    // Read file to Base64
-    const imageBase64 = fs.readFileSync(file.filepath, { encoding: "base64" });
+    // 🔥 IMPORTANT: Use toBuffer() (Vercel compatible)
+    const buffer = await file.toBuffer();
+    const imageBase64 = buffer.toString("base64");
 
-    // ⭐ FIXED: Correct Roboflow request format
+    // 🔥 Send to Roboflow
+    const roboflowURL = `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}`;
     const roboflowRes = await axios({
       method: "POST",
-      url: `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}`,
+      url: roboflowURL,
       params: {
-        api_key: process.env.ROBOFLOW_API_KEY
+        api_key: process.env.ROBOFLOW_API_KEY,
       },
-      data: `base64=${imageBase64}`,   // <-- REQUIRED FORMAT
+      data: imageBase64,
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
     });
 
-    console.log("ROBOFLOW RESPONSE:", roboflowRes.data);
+    console.log("ROBLOFLOW RESPONSE:", roboflowRes.data);
 
     return res.status(200).json({
       success: true,
-      predictions: roboflowRes.data.predictions
+      predictions: roboflowRes.data.predictions,
     });
 
   } catch (err) {
     console.error("SERVER ERROR:", err);
     return res.status(500).json({
       success: false,
-      error: err.message || "Unknown server error"
+      error: err.message || "Unknown server error",
     });
   }
 }
