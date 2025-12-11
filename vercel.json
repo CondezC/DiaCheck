@@ -1,9 +1,9 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/process-upload.js", "use": "@vercel/node" }
+    { "src": "api/upload.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/process-upload", "dest": "/api/process-upload.js" }
+    { "src": "/api/upload", "dest": "/api/upload.js" }
   ]
 }
