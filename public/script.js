@@ -144,11 +144,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // ⭐⭐⭐ FIXED PROCESS — CORRECT ROBOFLOW CLASSIFICATION ⭐⭐⭐
   // ====================================================================
   async function process(formData) {
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData
-      });
+  try {
+    const res = await fetch("/api/processUpload", {
+      method: "POST",
+      body: formData
+    });
+
 
       const apiResult = await res.json();
       console.log("📥 FRONTEND RECEIVED:", apiResult);
