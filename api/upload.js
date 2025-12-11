@@ -1,5 +1,5 @@
 import { IncomingForm } from "formidable";
-import { processUpload } from "../../lib/processUpload.js";
+import { processUpload } from "./processUpload.js";
 
 export const config = {
   api: { bodyParser: false },
@@ -21,7 +21,6 @@ export default function handler(req, res) {
         return res.status(400).json({ error: "Form parsing failed" });
       }
 
-      // 🔥 Handle Vercel's random file key names
       const uploaded =
         files.image ||
         files.file ||
