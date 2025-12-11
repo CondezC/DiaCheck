@@ -1,5 +1,5 @@
 import { IncomingForm } from "formidable";
-import { processUpload } from "./lib/processUpload.js";
+import { processUpload } from "./process-upload.js";
 
 export const config = {
   api: { bodyParser: false },
@@ -21,11 +21,14 @@ export default function handler(req, res) {
         return res.status(400).json({ error: "Form parsing failed" });
       }
 
-      // 🔥 FIX: Vercel sometimes uses files.file instead of files.image
+      // 🔥 Vercel sometimes renames file keys
       const uploaded =
         files.image ||
         files.file ||
-        (Array.isArray(files.image) ? files.image[0] : null);
+        files.upload ||
+        (Array.isArray(files.image) ? files.image[0] : null) ||
+        (Array.isArray(files.file) ? files.file[0] : null) ||
+        (Array.isArray(files.upload) ? files.upload[0] : null);
 
       const base64 = fields?.image || null;
 
