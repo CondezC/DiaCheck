@@ -8,33 +8,33 @@ export async function processUpload({ file, base64 }) {
   try {
     let imageBase64;
 
-    // 🔥 If Vercel sent base64 directly (common on serverless)
+    // 🔥 If Vercel sent a base64 directly
     if (base64) {
       imageBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
-    } 
+    }
+    // 🔥 If user uploaded a file
     else if (file) {
       const filePath = file.filepath || file.path;
 
       if (!filePath) {
-        return { success: false, error: "File path missing (Vercel)" };
+        return { success: false, error: "File path missing (from Vercel)" };
       }
 
       imageBase64 = fs.readFileSync(filePath, { encoding: "base64" });
 
-      // Delete local temp file (Vercel storage is limited)
+      // Delete temp file
       try { fs.unlinkSync(filePath); } catch {}
-    } 
+    }
     else {
       return { success: false, error: "No image found" };
     }
 
-    const url = `https://detect.roboflow.com/${process.env.ROBOFLOW_MODEL_ID}?api_key=${process.env.ROBOFLOW_API_KEY}`;
+    // 🔥 FIXED — Use Roboflow CLASSIFICATION API
+    const url = `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}?api_key=${process.env.ROBOFLOW_API_KEY}`;
 
-    // 🔥 REQUIRED FORMAT for Roboflow
-    const body = `image=${imageBase64}`;
-
-    const response = await axios.post(url, body, {
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    // 🔥 FIXED — classification expects JSON, not form-urlencoded
+    const response = await axios.post(url, {
+      image: imageBase64,
     });
 
     const predictions = response.data?.predictions || [];
@@ -45,10 +45,11 @@ export async function processUpload({ file, base64 }) {
         disease: "Healthy",
         confidence: 100,
         message: "No diabetes detected",
-        predictions: []
+        predictions: [],
       };
     }
 
+    // Pick highest confidence
     const topPrediction = predictions.sort((a, b) => b.confidence - a.confidence)[0];
 
     return {
