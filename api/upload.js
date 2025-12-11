@@ -1,5 +1,5 @@
 import { IncomingForm } from "formidable";
-import { processUpload } from "./process-upload.js";
+import { processpload } from "./processUpload.js";
 
 export const config = {
   api: { bodyParser: false },
