@@ -14,12 +14,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // NEW Formidable v3 syntax (required for Vercel)
+    // Formidable v3 (Correct syntax)
     const form = formidable({
       multiples: false,
       keepExtensions: true,
     });
 
+    // Parse request
     const { files } = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
         if (err) reject(err);
@@ -32,29 +33,33 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "No image uploaded" });
     }
 
-    // Read buffer (Vercel-compatible)
+    // Read the uploaded file as Base64
     const imageBuffer = fs.readFileSync(file.filepath);
     const imageBase64 = imageBuffer.toString("base64");
 
-    // Send to Roboflow
-    const roboflowRes = await axios({
+    // Send image to Roboflow
+    const roboflowResponse = await axios({
       method: "POST",
       url: `${process.env.ROBOFLOW_API_URL}/${process.env.ROBOFLOW_MODEL_ID}`,
-      params: { api_key: process.env.ROBOFLOW_API_KEY },
+      params: {
+        api_key: process.env.ROBOFLOW_API_KEY,
+      },
       data: imageBase64,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
     });
 
     return res.status(200).json({
       success: true,
-      predictions: roboflowRes.data.predictions,
+      predictions: roboflowResponse.data.predictions,
     });
 
   } catch (err) {
-    console.error("SERVER ERROR:", err);
+    console.error("UPLOAD API ERROR:", err);
     return res.status(500).json({
       success: false,
-      error: err.message || "Unknown server error",
+      error: err.message || "Server Error",
     });
   }
 }
